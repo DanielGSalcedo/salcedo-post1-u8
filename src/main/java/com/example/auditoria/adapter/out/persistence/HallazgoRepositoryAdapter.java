@@ -1,0 +1,95 @@
+package com.example.auditoria.adapter.out.persistence;
+
+import com.example.auditoria.domain.entity.HallazgoAuditoria;
+import com.example.auditoria.domain.valueobject.HallazgoId;
+import com.example.auditoria.domain.valueobject.PlanRemediacion;
+import com.example.auditoria.usecase.port.ConteoCategoria;
+import com.example.auditoria.usecase.port.HallazgoRepositoryPort;
+import com.example.auditoria.usecase.port.PromedioCategoria;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Optional;
+
+@Component
+public class HallazgoRepositoryAdapter implements HallazgoRepositoryPort {
+
+    private final HallazgoJpaRepository jpa;
+
+    public HallazgoRepositoryAdapter(HallazgoJpaRepository jpa) {
+        this.jpa = jpa;
+    }
+
+    @Override
+    public void guardar(HallazgoAuditoria hallazgo) {
+        jpa.save(toEntity(hallazgo));
+    }
+
+    @Override
+    public Optional<HallazgoAuditoria> buscarPorId(HallazgoId id) {
+        return jpa.findById(id.toString()).map(this::toDomain);
+    }
+
+    @Override
+    public List<HallazgoAuditoria> buscarTodos() {
+        return jpa.findAll().stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<ConteoCategoria> contarPorSeveridad() {
+        return jpa.contarPorSeveridad().stream()
+                .map(p -> new ConteoCategoria(p.getCategoria(), p.getTotal() == null ? 0L : p.getTotal()))
+                .toList();
+    }
+
+    @Override
+    public List<ConteoCategoria> contarPorEstado() {
+        return jpa.contarPorEstado().stream()
+                .map(p -> new ConteoCategoria(p.getCategoria(), p.getTotal() == null ? 0L : p.getTotal()))
+                .toList();
+    }
+
+    @Override
+    public List<PromedioCategoria> promedioDiasCierrePorArea() {
+        return jpa.promedioDiasCierrePorArea().stream()
+                .map(p -> new PromedioCategoria(p.getCategoria(),
+                        p.getPromedio() == null ? 0.0 : p.getPromedio().doubleValue()))
+                .toList();
+    }
+
+    private HallazgoAuditoria toDomain(HallazgoJpaEntity e) {
+        PlanRemediacion plan = null;
+        if (e.getPlanResponsable() != null && e.getPlanFechaLimite() != null) {
+            plan = new PlanRemediacion(
+                    e.getPlanResponsable(), e.getPlanFechaLimite(), e.getPlanNotas());
+        }
+        return HallazgoAuditoria.reconstituir(
+                HallazgoId.de(e.getId()),
+                e.getTitulo(),
+                e.getDescripcion(),
+                e.getAreaResponsable(),
+                e.getSeveridad(),
+                e.getFechaDeteccion(),
+                e.getEstado(),
+                plan,
+                e.getFechaCierre());
+    }
+
+    private HallazgoJpaEntity toEntity(HallazgoAuditoria h) {
+        HallazgoJpaEntity e = new HallazgoJpaEntity();
+        e.setId(h.getId().toString());
+        e.setTitulo(h.getTitulo());
+        e.setDescripcion(h.getDescripcion());
+        e.setAreaResponsable(h.getAreaResponsable());
+        e.setSeveridad(h.getSeveridad());
+        e.setEstado(h.getEstado());
+        e.setFechaDeteccion(h.getFechaDeteccion());
+        e.setFechaCierre(h.getFechaCierre());
+        if (h.getPlanRemediacion() != null) {
+            e.setPlanResponsable(h.getPlanRemediacion().responsable());
+            e.setPlanFechaLimite(h.getPlanRemediacion().fechaLimite());
+            e.setPlanNotas(h.getPlanRemediacion().notas());
+        }
+        return e;
+    }
+}
