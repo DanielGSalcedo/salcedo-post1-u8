@@ -1,0 +1,67 @@
+### Variables
+@base = http://localhost:8080/api/hallazgos
+@id = d30c9413-25d7-49f2-843e-aec83740ea12
+@idReabierto = e5050994-7234-4f93-9cb1-bedce6b23a00
+@idAbierto = d57148b5-a702-48d3-8b62-a4eb89578415
+
+### 1. Registrar hallazgo (201 Created)
+POST {{base}}
+Content-Type: application/json
+
+{
+  "titulo": "Contrasenas por defecto en servidor de pruebas",
+  "descripcion": "El servidor QA usa credenciales por defecto del fabricante",
+  "areaResponsable": "Infraestructura",
+  "severidad": "ALTA",
+  "fechaDeteccion": "2026-08-01"
+}
+
+### 2. Iniciar remediacion (200 OK)
+PATCH {{base}}/{{id}}/iniciar-remediacion
+Content-Type: application/json
+
+{
+  "responsable": "Equipo de Infraestructura",
+  "fechaLimite": "2026-08-20",
+  "notas": "Rotar credenciales"
+}
+
+### 3. Cerrar hallazgo (200 OK)
+PATCH {{base}}/{{id}}/cerrar
+
+### 4. Reabrir hallazgo (200 OK)
+PATCH {{base}}/{{id}}/reabrir
+Content-Type: application/json
+
+{
+  "motivo": "El hallazgo reaparecio en la auditoria externa"
+}
+
+### 5. Consultar historial cronologico (200 OK)
+GET {{base}}/{{id}}/historial
+
+### 6. Consultar dashboard consolidado (200 OK)
+GET {{base}}/dashboard
+
+### 7. Listar hallazgos (200 OK)
+GET {{base}}
+
+### 8. Consultar un hallazgo (200 OK / 404 Not Found)
+GET {{base}}/{{id}}
+
+### 9. Cerrar sin plan de remediacion (400 Bad Request)
+PATCH {{base}}/{{idAbierto}}/cerrar
+
+### 10. Reabrir un hallazgo abierto (400 Bad Request)
+PATCH {{base}}/{{idAbierto}}/reabrir
+Content-Type: application/json
+
+{
+  "motivo": "Intento invalido de reapertura"
+}
+
+### 11. Cerrar un hallazgo reabierto sin iniciar remediacion (400 Bad Request)
+PATCH {{base}}/{{idReabierto}}/cerrar
+
+### 12. Hallazgo inexistente (404 Not Found)
+GET {{base}}/00000000-0000-0000-0000-000000000000
